@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DCI Prototype v0.2</title>
+<style>
+body{margin:0;background:#eef3f8;color:#102033;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.app{max-width:430px;min-height:100vh;margin:auto;background:white}.top{padding:22px 20px 10px;font-size:25px;font-weight:850}
+.screen{padding:16px 20px 36px}.card{border:1px solid #dde5ee;border-radius:18px;padding:19px;margin:14px 0;box-shadow:0 6px 20px #00000008}
+.muted{color:#667789}.amount{font-size:30px;font-weight:850}.btn{width:100%;padding:15px;border:0;border-radius:14px;margin-top:11px;font-size:16px;font-weight:750;background:#155eef;color:white}.alt{background:#edf3ff;color:#155eef}.danger{background:#fff0f0;color:#b42318}
+input{width:100%;padding:15px;border:1px solid #cbd5e1;border-radius:12px;margin:7px 0 13px;font-size:18px}.code{text-align:center;font-size:29px;font-weight:900;letter-spacing:4px;background:#f3f7ff;padding:18px;border-radius:14px;margin:15px 0}.ok{color:#087443;font-weight:800}.small{font-size:13px}
+</style>
+</head>
+<body>
+<div class="app"><div class="top">DCI</div><div id="screen" class="screen"></div></div>
+<script>
+const s={amount:"20000",owner:"482731",recipient:"",pin:"6384",status:"available"};
+const el=document.getElementById("screen");
+
+function home(){el.innerHTML=`<div class="card"><h2>DCI Cash Access</h2>
+<p class="muted">Prototype v0.2 — cardless and emergency cash access.</p>
+<button class="btn" onclick="withdraw()">Create Withdrawal</button>
+<button class="btn alt" onclick="emergency()">Emergency Access</button></div>
+<div class="card"><b>Test only</b><br><span class="small">No real bank or money is connected.</span></div>`}
+
+function withdraw(){el.innerHTML=`<h2>Create DCI Authorization</h2>
+<p class="muted">Simulates authorization by an existing bank/wallet.</p>
+<label>Amount</label><input id="amt" value="20000" inputmode="numeric">
+<button class="btn" onclick="create()">Create Authorization</button>
+<button class="btn alt" onclick="home()">Back</button>`}
+
+function create(){s.amount=(document.getElementById("amt").value||"20000").replace(/\D/g,"");s.status="available";authorization()}
+
+function authorization(){el.innerHTML=`<h2>DCI Authorization</h2>
+<div class="card"><div class="muted">Authorized amount</div><div class="amount">₦${Number(s.amount).toLocaleString()}</div>
+<p class="ok">● AVAILABLE</p><div class="muted">DCI Access Number</div><div class="code">${s.owner}</div>
+<p class="small">No automatic expiry in this prototype. It can be used, transferred, or cancelled.</p></div>
+<button class="btn" onclick="transfer()">Transfer Authorization</button>
+<button class="btn" onclick="cashout()">Cash-out</button>
+<button class="btn danger" onclick="cancel()">Cancel Authorization</button>`}
+
+function transfer(){el.innerHTML=`<h2>Transfer Authorization</h2>
+<div class="card"><div class="muted">Amount</div><div class="amount">₦${Number(s.amount).toLocaleString()}</div>
+<p>From DCI: <b>${s.owner}</b></p></div>
+<label>Recipient DCI Access Number</label><input id="rec" maxlength="6" inputmode="numeric" placeholder="736291">
+<label>Confirm number</label><input id="rec2" maxlength="6" inputmode="numeric" placeholder="736291">
+<button class="btn" onclick="doTransfer()">Confirm Transfer</button>
+<button class="btn alt" onclick="authorization()">Back</button>`}
+
+function doTransfer(){let a=document.getElementById("rec").value,b=document.getElementById("rec2").value;
+if(!/^\d{6}$/.test(a)||a!==b){alert("Enter the same 6-digit number twice.");return}
+s.recipient=a;s.status="transferred";
+el.innerHTML=`<h2>Transfer Successful</h2><div class="card"><div class="ok">✓ Authorization transferred</div>
+<div class="amount">₦${Number(s.amount).toLocaleString()}</div><p>New DCI holder: <b>${s.recipient}</b></p>
+<p class="muted">The original holder cannot redeem it in this demo.</p></div>
+<button class="btn" onclick="recipientCashout()">Recipient Cash-out</button><button class="btn alt" onclick="home()">Home</button>`}
+
+function recipientCashout(){el.innerHTML=`<h2>Recipient Cash-out</h2>
+<div class="card"><div class="muted">Authorization found</div><div class="amount">₦${Number(s.amount).toLocaleString()}</div>
+<p class="ok">✓ Belongs to DCI ${s.recipient}</p></div>
+<button class="btn" onclick="redeem()">Confirm Cash Withdrawal</button>`}
+
+function emergency(){el.innerHTML=`<h2>Emergency Access</h2>
+<p class="muted">For when the customer cannot use their phone or physical ATM card.</p>
+<label>6-digit DCI Access Number</label><input id="id" maxlength="6" inputmode="numeric" placeholder="482731">
+<label>DCI PIN</label><input id="pin" maxlength="4" inputmode="numeric" type="password" placeholder="6384">
+<button class="btn" onclick="verify()">Verify</button><button class="btn alt" onclick="home()">Back</button>`}
+
+function verify(){let id=document.getElementById("id").value,p=document.getElementById("pin").value;
+if(id===s.owner&&p===s.pin&&s.status==="available")cashout();
+else if(id===s.recipient&&s.status==="transferred")recipientCashout();
+else alert("Demo verification failed. Try 482731 and PIN 6384.");}
+
+function cashout(){el.innerHTML=`<h2>Cash-out</h2><div class="card"><p class="ok">✓ Authorization verified</p>
+<div class="amount">₦${Number(s.amount).toLocaleString()}</div><p>DCI ${s.owner}</p></div>
+<button class="btn" onclick="redeem()">Confirm Cash Withdrawal</button><button class="btn alt" onclick="home()">Home</button>`}
+
+function redeem(){s.status="redeemed";el.innerHTML=`<h2>Withdrawal Complete</h2>
+<div class="card"><div class="ok">✓ CASH AUTHORIZED</div><div class="amount">₦${Number(s.amount).toLocaleString()}</div>
+<p>Status: <b>REDEEMED</b></p><p class="small">This authorization cannot be redeemed again.</p></div>
+<button class="btn" onclick="home()">Return Home</button>`}
+
+function cancel(){s.status="cancelled";alert("Demo authorization cancelled.");home()}
+home();
+</script>
+</body>
+</html>
