@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DCI Prototype v0.3</title>
+<style>
+  body{font-family:Arial,sans-serif;margin:0;background:#f4f7fb;color:#172033}
+  .app{max-width:520px;margin:auto;min-height:100vh;background:white}
+  header{padding:28px 22px;background:#102a43;color:white}
+  header h1{margin:0;font-size:30px} header p{margin:6px 0 0;opacity:.85}
+  main{padding:22px}
+  .card{border:1px solid #dce3ec;border-radius:16px;padding:18px;margin-bottom:16px}
+  input,button{width:100%;box-sizing:border-box;padding:14px;border-radius:10px;font-size:16px}
+  input{border:1px solid #cbd5e1;margin:7px 0 12px}
+  button{border:0;background:#1769aa;color:white;font-weight:700;margin-top:8px}
+  button.secondary{background:#e8eef5;color:#172033}
+  .id{font-size:32px;font-weight:800;letter-spacing:5px;text-align:center;padding:15px}
+  .hidden{display:none}.muted{color:#65758b;font-size:14px}
+  .success{padding:12px;border-radius:10px;background:#eef8f1;margin-top:12px}
+  .serial{font-family:monospace;font-weight:700;word-break:break-all}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <h1>DCI</h1>
+  <p>Digital Civil Identification — Prototype v0.3</p>
+</header>
+
+<main>
+<section id="welcome" class="card">
+  <h2>Create your DCI</h2>
+  <p class="muted">This prototype demonstrates a permanent DCI identity and transaction verification flow. It does not handle real money or real identity data.</p>
+  <input id="name" placeholder="Full name">
+  <input id="phone" placeholder="Phone number">
+  <button onclick="createDCI()">Create DCI ID</button>
+</section>
+
+<section id="identity" class="card hidden">
+  <h2>Your DCI ID</h2>
+  <div id="dciId" class="id"></div>
+  <p class="muted">Keep this identifier private. In a real system, uniqueness would be enforced by a secure server/database.</p>
+  <input id="pin" inputmode="numeric" maxlength="6" placeholder="Create 4–6 digit PIN">
+  <button onclick="savePin()">Save PIN & Open Dashboard</button>
+</section>
+
+<section id="dashboard" class="card hidden">
+  <h2>DCI Dashboard</h2>
+  <p><strong>DCI ID:</strong> <span id="dashId"></span></p>
+  <p><strong>Status:</strong> Active (prototype)</p>
+  <button onclick="show('transaction')">New Transaction</button>
+  <button class="secondary" onclick="show('verify')">Verify Transaction</button>
+  <button class="secondary" onclick="show('history')">Transaction History</button>
+</section>
+
+<section id="transaction" class="card hidden">
+  <h2>Create Transaction Serial</h2>
+  <p class="muted">The serial identifies this transaction; it is separate from the permanent DCI ID.</p>
+  <button onclick="newTransaction()">Generate Transaction Serial</button>
+  <div id="newSerial" class="success hidden"></div>
+  <button class="secondary" onclick="show('dashboard')">Back</button>
+</section>
+
+<section id="verify" class="card hidden">
+  <h2>Verify Transaction</h2>
+  <input id="verifySerial" placeholder="Enter transaction serial">
+  <button onclick="verifyTransaction()">Verify</button>
+  <div id="verifyResult"></div>
+  <button class="secondary" onclick="show('dashboard')">Back</button>
+</section>
+
+<section id="history" class="card hidden">
+  <h2>Transaction History</h2>
+  <div id="historyList" class="muted">No transactions yet.</div>
+  <button class="secondary" onclick="show('dashboard')">Back</button>
+</section>
+</main>
+</div>
+
+<script>
+const state = JSON.parse(localStorage.getItem("dciPrototype") || "null") || {
+  dciId:null, name:"", phone:"", pin:null, transactions:[]
+};
+
+function save(){localStorage.setItem("dciPrototype",JSON.stringify(state));}
+
+function generateDCI(){
+  let id;
+  do { id = String(Math.floor(100000 + Math.random()*900000)); }
+  while (id === state.dciId);
+  return id;
+}
+
+function createDCI(){
+  const name=document.getElementById("name").value.trim();
+  const phone=document.getElementById("phone").value.trim();
+  if(!name || !phone){alert("Please enter your name and phone number.");return;}
+  state.name=name; state.phone=phone; state.dciId=generateDCI(); save();
+  document.getElementById("dciId").textContent=state.dciId;
+  show("identity");
+}
+
+function savePin(){
+  const pin=document.getElementById("pin").value.trim();
+  if(!/^\d{4,6}$/.test(pin)){alert("PIN must contain 4–6 digits.");return;}
+  state.pin=pin; save();
+  document.getElementById("dashId").textContent=state.dciId;
+  show("dashboard");
+}
+
+function makeSerial(){
+  const now=Date.now().toString(36).toUpperCase();
+  const rand=Math.random().toString(36).slice(2,8).toUpperCase();
+  return "TX-" + now + "-" + rand;
+}
+
+function newTransaction(){
+  const serial=makeSerial();
+  state.transactions.push({serial,time:new Date().toISOString(),dciId:state.dciId});
+  save();
+  const box=document.getElementById("newSerial");
+  box.innerHTML="<strong>Transaction Serial:</strong><br><span class='serial'>"+serial+"</span>";
+  box.classList.remove("hidden");
+  renderHistory();
+}
+
+function verifyTransaction(){
+  const value=document.getElementById("verifySerial").value.trim().toUpperCase();
+  const found=state.transactions.find(t=>t.serial===value);
+  const box=document.getElementById("verifyResult");
+  if(found){
+    box.className="success";
+    box.textContent="Verified: transaction belongs to DCI ID " + found.dciId + ".";
+  } else {
+    box.className="success";
+    box.textContent="Transaction not found in this prototype.";
+  }
+}
+
+function renderHistory(){
+  const list=document.getElementById("historyList");
+  if(!state.transactions.length){list.textContent="No transactions yet.";return;}
+  list.innerHTML=state.transactions.map(t=>"<div class='card'><strong>"+t.serial+"</strong><br><span class='muted'>DCI ID: "+t.dciId+"</span></div>").join("");
+}
+
+function show(id){
+  ["welcome","identity","dashboard","transaction","verify","history"].forEach(x=>document.getElementById(x).classList.add("hidden"));
+  document.getElementById(id).classList.remove("hidden");
+  if(id==="history") renderHistory();
+}
+
+if(state.dciId && state.pin){
+  document.getElementById("dashId").textContent=state.dciId;
+  show("dashboard");
+}
+</script>
+</body>
+</html>
