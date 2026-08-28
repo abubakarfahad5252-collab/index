@@ -80,7 +80,7 @@
 
 <script>
 const state = JSON.parse(localStorage.getItem("dciPrototype") || "null") || {
-  dciId:null, name:"", phone:"", pin:null, transactions:[]
+  dciId:null, name:"", phone:"", pin:null, transaction:[]
 };
 
 function save(){localStorage.setItem("dciPrototype",JSON.stringify(state));}
@@ -133,7 +133,7 @@ function verifyTransaction(){
     box.className="success";
     box.textContent="Verified: transaction belongs to DCI ID " + found.dciId + ".";
   } else {
-    box.className="success";
+    box.className="error";
     box.textContent="Transaction not found in this prototype.";
   }
 }
